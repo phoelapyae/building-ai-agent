@@ -10,7 +10,7 @@ use function Laravel\Prompts\{text, spin};
 
 #[Signature('dialog')]
 #[Description('Retrieve a response from the OpenAI API')]
-class ChatCommand extends Command
+class DialogCommand extends Command
 {
     protected $history = [];
     /**
