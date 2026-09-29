@@ -2,6 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Ai\Tools\CurrentTime;
+use App\Ai\Tools\ReadFile;
+use App\Ai\Tools\Revenue;
+use App\Ai\Tools\Tool;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -57,22 +61,18 @@ class AgentCommand extends Command
 
                     info("Running Tool:" . $call['name'] . "(". json_encode($call['arguments']).")");
 
-                    if ($call['name'] === 'get_current_time') {
-                        $this->history[] = [
-                            'type'    => 'function_call_output',
-                            'call_id' => $call['call_id'],
-                            'output'  => now()->toIso8601String()
-                        ];
-                    }
+                    foreach ($this->tools() as $tool) {
+                        if ($tool->definition()['name'] === $call['name']) {
+                            $arguments = json_decode($call['arguments'], associative: true);
 
-                    if ($call['name'] === 'read_file') {
-                        $this->history[] = [
-                            'type' => 'function_call_output',
-                            'call_id' => $call['call_id'],
-                            'output' => file_get_contents(
-                                base_path(json_decode($call['arguments'])->path)
-                            )
-                        ];
+                            $result = $tool->use($arguments);
+
+                            $this->history[] = [
+                                'type' => 'function_call_output',
+                                'call_id' => $call['call_id'],
+                                'output'  => (string) $result
+                            ];
+                        }
                     }
                 });
             }
@@ -86,32 +86,17 @@ class AgentCommand extends Command
                 'model' => 'gpt-5.4-nano',
                 'instructions' => 'You are a helpful assistant.',
                 'input' => $this->history,
-                'tools' => [
-                    [
-                        'type' => 'function',
-                        'name' => 'get_current_time',
-                        'description' => 'Get the current server time as an ISO 8601 string.'
-                    ],
-                    [
-                        'type' => 'function',
-                        'name' => 'read_file',
-                        'description' => 'Read the contents of a file, relative to the project root',
-                        'parameters' => [
-                            'type' => 'object',
-                            'properties' => [
-                                'path' => [
-                                    'type' => 'string',
-                                    'description' => 'The relative path to the file.'
-                                ]
-                            ],
-                            'required' => ['path'],
-                            'additionalProperties' => false
-                        ],
-                        'strict' => true
-                    ]
-                ]
+                'tools' => array_map(fn(Tool $tool) => $tool->definition(), $this->tools())
             ])
             ->throw()
             ->json();
+    }
+
+    private function tools(): array {
+        return [
+            new CurrentTime(),
+            new ReadFile(),
+            new Revenue()
+        ];
     }
 }
