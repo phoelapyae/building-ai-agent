@@ -2,14 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Ai\Tools\CurrentTime;
-use App\Ai\Tools\ReadFile;
-use App\Ai\Tools\Revenue;
-use App\Ai\Tools\Tool;
+use App\Ai\Agents\ChatbotAgent;
+use App\Ai\Agents\GrammerAssistantAgent;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 use function Laravel\Prompts\{text, spin, info};
 
 #[Signature('agent')]
@@ -22,81 +19,26 @@ class AgentCommand extends Command
      */
     public function handle()
     {
-        while (true) {
-            $prompt = text(
-                label: 'What is on your mind?',
-                required: true,
-            );
+        // while (true) {
+        //     $agent = new ChatbotAgent();
 
-            if (in_array(strtolower(trim($prompt)), ['exit', 'quit'], true)) {
-                return self::SUCCESS;
-            }
+        //     $prompt = text(
+        //         label: 'What is on your mind?',
+        //         required: true,
+        //     );
 
-            $this->history[] = [
-                'role' => 'user',
-                'content' => $prompt
-            ];
+        //     $response = spin(
+        //         fn() => $agent->prompt($prompt),
+        //         'Hmm... thinking about that.'
+        //     );
 
-            while(true){
-                $response = spin(
-                    fn() => $this->runModel(),
-                    message: 'Retrieving response from OpenAI...'
-                );
+        //     info($response);
+        // }
 
-                $this->history = [...$this->history, ...$response['output']];
+        $agent = new GrammerAssistantAgent();
 
-                $functionCalls = collect($response['output'])->filter(
-                    fn($item) => $item['type'] === 'function_call'
-                );
+        $response = $agent->prompt('The big brown dog jumped over the white moon and landed on a gigantic piece of cheese.');
 
-                if ($functionCalls->isEmpty()) {
-                    // dump($response);
-
-                    $this->info($response['output'][0]['content'][0]['text'] ?? 'No response from OpenAI.');
-
-                    break;
-                }
-
-                $functionCalls->each(function ($call) {
-
-                    info("Running Tool:" . $call['name'] . "(". json_encode($call['arguments']).")");
-
-                    foreach ($this->tools() as $tool) {
-                        if ($tool->definition()['name'] === $call['name']) {
-                            $arguments = json_decode($call['arguments'], associative: true);
-
-                            $result = $tool->use($arguments);
-
-                            $this->history[] = [
-                                'type' => 'function_call_output',
-                                'call_id' => $call['call_id'],
-                                'output'  => (string) $result
-                            ];
-                        }
-                    }
-                });
-            }
-        }
-    }
-
-    private function runModel(): array
-    {
-        return Http::withToken(config('services.openai.api_key'))
-            ->post('https://api.openai.com/v1/responses', [
-                'model' => 'gpt-5.4-nano',
-                'instructions' => 'You are a helpful assistant.',
-                'input' => $this->history,
-                'tools' => array_map(fn(Tool $tool) => $tool->definition(), $this->tools())
-            ])
-            ->throw()
-            ->json();
-    }
-
-    private function tools(): array {
-        return [
-            new CurrentTime(),
-            new ReadFile(),
-            new Revenue()
-        ];
+        dump($response);
     }
 }
