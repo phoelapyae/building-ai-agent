@@ -35,10 +35,26 @@ class AgentCommand extends Command
         //     info($response);
         // }
 
-        $agent = new GrammerAssistantAgent();
+        // $agent = new GrammerAssistantAgent();
 
-        $response = $agent->prompt('The big brown dog jumped over the white moon and landed on a gigantic piece of cheese.');
+        // $response = $agent->prompt('The big brown dog jumped over the white moon and landed on a gigantic piece of cheese.');
 
-        dump($response);
+        // dump($response);
+
+        $agent = new ChatbotAgent();
+
+        while (true) {
+            $prompt = text(
+                label: 'What is on your mind?',
+                required: true,
+            );
+
+            $response = spin(
+                fn() => $agent->prompt($prompt),
+                'Hmm... thinking about that.'
+            );
+
+            info($response);
+        }
     }
 }

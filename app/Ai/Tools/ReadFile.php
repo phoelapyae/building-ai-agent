@@ -2,7 +2,8 @@
 
 namespace App\Ai\Tools;
 
-class ReadFile implements Tool {
+class ReadFile implements Tool
+{
     public function definition(): array
     {
         return [
@@ -14,20 +15,44 @@ class ReadFile implements Tool {
                 'properties' => [
                     'path' => [
                         'type' => 'string',
-                        'description' => 'The relative path to the file.'
-                    ]
+                        'description' => 'The relative path to the file.',
+                    ],
                 ],
                 'required' => ['path'],
-                'additionalProperties' => false
+                'additionalProperties' => false,
             ],
-            'strict' => true
+            'strict' => true,
         ];
     }
 
-    public function use(array $arguments = [])
+    public function use(array $arguments): string
     {
-        return file_get_contents(
-            base_path($arguments['path'])
-        );
+        $path = $arguments['path'] ?? '';
+
+        if ($path === '') {
+            return 'Error: No path provided.';
+        }
+
+        $fullPath = base_path($path);
+
+        if (! file_exists($fullPath)) {
+            return "Error: File not found: {$path}";
+        }
+
+        if (is_dir($fullPath)) {
+            return "Error: Path is a directory, not a file: {$path}";
+        }
+
+        if (! is_readable($fullPath)) {
+            return "Error: File is not readable: {$path}";
+        }
+
+        $contents = file_get_contents($fullPath);
+
+        if ($contents === false) {
+            return "Error: Could not read file: {$path}";
+        }
+
+        return $contents === '' ? '(empty file)' : $contents;
     }
 }

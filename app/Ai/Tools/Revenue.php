@@ -4,7 +4,8 @@ namespace App\Ai\Tools;
 
 use Override;
 
-class Revenue implements Tool {
+class Revenue implements Tool
+{
     #[Override]
     public function definition(): array
     {
@@ -18,27 +19,34 @@ class Revenue implements Tool {
                     'period' => [
                         'type' => 'string',
                         'enum' => ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'],
-                        'description' => 'The period of time to fetch revenue for.'
-                    ]
+                        'description' => 'The period of time to fetch revenue for.',
+                    ],
                 ],
                 'required' => ['period'],
-                'additionalProperties' => false
+                'additionalProperties' => false,
             ],
-            'strict' => true
+            'strict' => true,
         ];
     }
 
-    public function use(array $arguments = []): string {
-        $period = $arguments['period'];
+    public function use(array $arguments): string
+    {
+        $period = $arguments['period'] ?? '';
 
         $dailyRevenue = 1200;
 
-        return [
-            'daily'    => $dailyRevenue,
-            'weekly'   => $dailyRevenue * 7,
-            'monthly'  => $dailyRevenue * 30,
+        $revenues = [
+            'daily' => $dailyRevenue,
+            'weekly' => $dailyRevenue * 7,
+            'monthly' => $dailyRevenue * 30,
             'quarterly' => ($dailyRevenue * 30) * 3,
-            'yearly'   => (($dailyRevenue * 30) * 3) * 4
-        ][$period] ?? 'Unknown period.';
+            'yearly' => (($dailyRevenue * 30) * 3) * 4,
+        ];
+
+        if (! isset($revenues[$period])) {
+            return "Error: Unknown period '{$period}'. Expected one of: ".implode(', ', array_keys($revenues)).'.';
+        }
+
+        return (string) $revenues[$period];
     }
 }

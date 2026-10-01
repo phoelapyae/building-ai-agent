@@ -2,8 +2,9 @@
 
 namespace App\Ai\Tools;
 
-interface Tool {
+interface Tool
+{
     public function definition(): array;
 
-    public function use(array $arguments);
+    public function use(array $arguments): string;
 }
