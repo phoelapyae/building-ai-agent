@@ -2,8 +2,11 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Attributes\CompactAfter;
 use App\Ai\Tools\Tool;
 use Illuminate\Support\Facades\Http;
+use ReflectionClass;
+
 use function Laravel\Prompts\{text, spin};
 
 class Agent {
@@ -14,6 +17,8 @@ class Agent {
     }
 
     public function prompt(string $prompt) {
+        $this->maybeCompact();
+
         $this->history[] = [
             'role'    => 'user',
             'content' => $prompt
@@ -73,6 +78,42 @@ class Agent {
             ])
             ->throw()
             ->json();
+    }
+
+    protected function maybeCompact(){
+        if ($this->shouldCompact()) {
+            // we need to compact the history to avoid hitting the token limit
+            $this->compact($this->history);
+        }
+    }
+
+    protected function shouldCompact(): bool {
+        $attributes = (new ReflectionClass($this))->getAttributes(CompactAfter::class);
+
+        $config = $attributes ? $attributes[0]->newInstance() : new CompactAfter(threshold: 3);
+
+        return count($this->history) > $config->threshold;
+    }
+
+    protected function compact(array $history): void {
+        $response = Http::withToken(config('services.openai.api_key'))
+                ->post('https://api.openai.com/v1/responses', [
+                    'model'         => 'gpt-5.4-nano',
+                    'instructions'  => 'You are a helpful AI assistant. You are given a conversation history between a user and an AI assistant. Your task is to summarize the conversation into a single message that captures the essence of the conversation. The summary should be concise and should not include any personal information or sensitive data.',
+                    'input'         => $history
+                ])
+                ->throw()
+                ->json();
+
+            $summary = $response['output'][0]['content'][0]['text'];
+
+            $this->history = [
+                [
+                    'role'    => 'user',
+                    'content' => '[Earlier conversation summary]: ' . $summary
+                ]
+            ];
+        dump('Compacted conversation history to avoid hitting token limit. New history: ', $this->history);
     }
 
     public function tools(): array {
