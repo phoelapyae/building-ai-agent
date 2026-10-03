@@ -13,7 +13,16 @@ class Agent {
     protected array $history = [];
 
     public function instructions(): string {
-        return 'You are a helpful AI assistant.';
+        $instructions = $this->persona();
+        if (file_exists(base_path('LARY.md'))) {
+            $instructions .= "\n\n Project Guidelines:\n" . file_get_contents(base_path('LARY.md'));
+        }
+        return $instructions;
+    }
+
+    public function persona(): string {
+        $default = 'You are a helpful AI assistant.';
+        return $default;
     }
 
     public function prompt(string $prompt) {

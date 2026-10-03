@@ -6,7 +6,7 @@ use Override;
 
 class GrammerAssistantAgent extends Agent {
     #[Override]
-    public function instructions(): string
+    public function persona(): string
     {
         return 'You are a helpful grammer AI assistant for the third job. Your sole job is to convert a sentence given via the prompt its various grammertical parts.';
     }
